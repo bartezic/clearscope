@@ -6,8 +6,8 @@ class DateSeriesService
 
   def initialize(relation:, date_start:, date_end:, interval:, aggregation:)
     @relation = relation
-    @date_start = Date.parse(date_start) rescue Time.now.beginning_of_year
-    @date_end = Date.parse(date_end) rescue Time.now.end_of_day
+    @date_start = Date.parse(date_start) rescue Date.today.beginning_of_year
+    @date_end = Date.parse(date_end) rescue Date.today.end_of_day
     @interval = interval.in?(INTERVALS) ? interval : INTERVALS.first
     @aggregation = aggregation.in?(AGGREGATIONS) ? aggregation : AGGREGATIONS.first
   end
