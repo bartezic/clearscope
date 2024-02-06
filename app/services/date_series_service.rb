@@ -1,15 +1,12 @@
 class DateSeriesService
-  INTERVALS = ['day', 'week', 'month', 'year']
-  AGGREGATIONS = ['avg', 'sum', 'max', 'min']
-
   attr_reader :relation, :date_start, :date_end, :interval, :aggregation
 
   def initialize(relation:, date_start:, date_end:, interval:, aggregation:)
     @relation = relation
-    @date_start = Date.parse(date_start) rescue Date.today.beginning_of_year
-    @date_end = Date.parse(date_end) rescue Date.today.end_of_day
-    @interval = interval.in?(INTERVALS) ? interval : INTERVALS.first
-    @aggregation = aggregation.in?(AGGREGATIONS) ? aggregation : AGGREGATIONS.first
+    @date_start = Date.parse(date_start) rescue nil
+    @date_end = Date.parse(date_end) rescue nil
+    @interval = interval
+    @aggregation = aggregation
   end
 
   def to_h
@@ -19,11 +16,31 @@ class DateSeriesService
   private
 
   def generate_series
-    @relation
-      .where(created_at: @date_start..@date_end)
-      .select("#{interval_trunk_func} AS date, #{@aggregation}(magnitude) AS value")
-      .group(interval_trunk_func)
-      .order('date')
+    filter_dates
+    aggregate_data
+    group_by_interval
+  end
+
+  def filter_dates
+    @relation = @relation.where(created_at: @date_start..@date_end) if @date_start && @date_end
+  end
+
+  def aggregate_data
+    case @aggregation
+    when 'min', 'max', 'avg', 'sum'
+      @relation = @relation.select("#{interval_trunk_func} as date, #{@aggregation}(magnitude) AS value")
+    else
+      raise ArgumentError, "Invalid aggregation function: #{@aggregation}"
+    end
+  end
+
+  def group_by_interval
+    case @interval
+    when 'day', 'week', 'month', 'year'
+      @relation = @relation.group(interval_trunk_func).order("date")
+    else
+      raise ArgumentError, "Invalid interval: #{@interval}"
+    end
   end
 
   def interval_trunk_func
